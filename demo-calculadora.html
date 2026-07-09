@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo - Calculadora de Notas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f; --cyan: #00f0ff; --magenta: #ff00aa;
+      --yellow: #ffee00; --green: #00ff41; --orange: #ff6600;
+      --white: #e0e0e0; --gray: #555; --dark-card: #0d0d14;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background:var(--bg); color:var(--white);
+      font-family:'VT323',monospace; font-size:1.2rem;
+      min-height:100vh; display:flex; flex-direction:column;
+    }
+    .scanlines {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:repeating-linear-gradient(0deg,transparent 0px,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+      pointer-events:none; z-index:9999;
+    }
+    .crt-overlay {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.6) 100%);
+      pointer-events:none; z-index:9998;
+    }
+    header {
+      background:rgba(10,10,15,0.85); backdrop-filter:blur(10px);
+      border-bottom:1px solid rgba(0,240,255,0.15);
+      padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center;
+    }
+    header h1 {
+      font-family:'Press Start 2P',monospace; font-size:0.55rem; color:var(--cyan);
+      text-shadow:0 0 10px var(--cyan);
+    }
+    .back-btn {
+      font-family:'Share Tech Mono',monospace; font-size:0.85rem;
+      color:var(--magenta); text-decoration:none; transition:0.3s;
+    }
+    .back-btn:hover { text-shadow:0 0 15px var(--magenta); }
+    .container {
+      flex:1; max-width:860px; margin:0 auto; padding:1.5rem 2rem; width:100%;
+    }
+    .header-section {
+      text-align:center; margin-bottom:2rem;
+    }
+    .header-section h1 {
+      font-family:'Press Start 2P',monospace; font-size:0.75rem;
+      color:var(--cyan); text-shadow:0 0 15px var(--cyan); margin-bottom:0.5rem;
+    }
+    .header-section p {
+      font-family:'Share Tech Mono',monospace; font-size:0.85rem; color:var(--gray);
+    }
+    .card {
+      background:var(--dark-card); border:1px solid rgba(0,240,255,0.1);
+      padding:1.5rem; margin-bottom:1.5rem;
+    }
+    .card h2 {
+      font-family:'Press Start 2P',monospace; font-size:0.5rem;
+      color:var(--yellow); margin-bottom:1rem;
+    }
+    .grid {
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem;
+    }
+    .item label {
+      font-family:'Share Tech Mono',monospace; font-size:0.8rem;
+      color:var(--cyan); display:block; margin-bottom:0.2rem;
+    }
+    .item .detalle {
+      font-family:'Share Tech Mono',monospace; font-size:0.65rem;
+      color:var(--gray); margin-bottom:0.5rem;
+    }
+    .item input {
+      width:100%; padding:0.4rem;
+      background:transparent; border:2px solid var(--gray);
+      color:var(--white); font-family:'VT323',monospace; font-size:1.2rem;
+      text-align:center; outline:none; transition:0.3s;
+    }
+    .item input:focus { border-color:var(--magenta); box-shadow:0 0 15px rgba(255,0,170,0.15); }
+    .resultado .box {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:0.5rem 0; border-bottom:1px solid rgba(255,255,255,0.05);
+      font-family:'Share Tech Mono',monospace; font-size:0.85rem;
+    }
+    .resultado .box:last-child { border-bottom:none; }
+    .resultado .box strong {
+      font-family:'Press Start 2P',monospace; font-size:0.65rem;
+    }
+    .estado {
+      padding:0.15rem 0.5rem;
+    }
+    .excelente { color:var(--green); text-shadow:0 0 10px var(--green); }
+    .muy-bueno { color:var(--cyan); text-shadow:0 0 10px var(--cyan); }
+    .bueno { color:var(--yellow); text-shadow:0 0 10px var(--yellow); }
+    .aprobado { color:var(--orange); text-shadow:0 0 10px var(--orange); }
+    .desaprobado { color:var(--magenta); text-shadow:0 0 10px var(--magenta); }
+    table {
+      width:100%; border-collapse:collapse; margin-bottom:1rem;
+      font-family:'Share Tech Mono',monospace; font-size:0.75rem;
+    }
+    thead { border-bottom:2px solid rgba(0,240,255,0.2); }
+    th { padding:0.5rem; color:var(--cyan); text-align:left; font-size:0.65rem; }
+    td { padding:0.5rem; border-bottom:1px solid rgba(255,255,255,0.05); }
+    th:last-child, td:last-child { text-align:right; }
+    .acciones {
+      display:flex; gap:0.8rem; margin-bottom:1rem;
+    }
+    .acciones button {
+      flex:1; padding:0.6rem; border:none;
+      font-family:'Press Start 2P',monospace; font-size:0.5rem;
+      cursor:pointer; transition:0.3s;
+    }
+    .acciones button:first-child {
+      background:var(--magenta); color:var(--bg);
+      box-shadow:0 0 15px rgba(255,0,170,0.3);
+    }
+    .acciones button:first-child:hover { box-shadow:0 0 30px rgba(255,0,170,0.5); }
+    .acciones button.secondary {
+      background:transparent; color:var(--cyan); border:1px solid var(--cyan);
+    }
+    .acciones button.secondary:hover { background:var(--cyan); color:var(--bg); }
+    .nota {
+      font-family:'Share Tech Mono',monospace; font-size:0.65rem;
+      color:var(--gray); line-height:1.5; padding:0.5rem;
+      border-left:2px solid var(--orange);
+    }
+    footer {
+      text-align:center; padding:1.5rem;
+      border-top:1px solid rgba(0,240,255,0.1);
+      font-family:'Share Tech Mono',monospace; font-size:0.75rem; color:var(--gray);
+    }
+  @media (max-width: 768px) {
+    .container { padding: 1rem; }
+    .card { padding: 1rem; }
+    .grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem; }
+    table { font-size: 0.65rem; display: block; overflow-x: auto; white-space: nowrap; }
+    .header-section h1 { font-size: 0.6rem; }
+    .header-section p { font-size: 0.7rem; }
+  }
+  @media (max-width: 480px) {
+    header { padding: 0.6rem 1rem; }
+    header h1 { font-size: 0.45rem; }
+    .back-btn { font-size: 0.7rem; }
+    .container { padding: 0.8rem; }
+    .header-section h1 { font-size: 0.5rem; }
+    .header-section p { font-size: 0.6rem; }
+    .card { padding: 0.8rem; margin-bottom: 1rem; }
+    .grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .item label { font-size: 0.65rem; }
+    .item .detalle { font-size: 0.55rem; }
+    .item input { font-size: 1rem; padding: 0.3rem; }
+    .resultado .box { font-size: 0.7rem; }
+    .resultado .box strong { font-size: 0.5rem; }
+    table { font-size: 0.55rem; }
+    th, td { padding: 0.3rem; }
+    .acciones button { font-size: 0.4rem; padding: 0.5rem; }
+    .nota { font-size: 0.55rem; }
+  }
+  @media (max-width: 360px) {
+    .grid { grid-template-columns: 1fr; }
+    .acciones { flex-direction: column; gap: 0.5rem; }
+    table { font-size: 0.5rem; }
+  }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+  <div class="crt-overlay"></div>
+
+  <header>
+    <h1>&gt; Calculadora de Notas</h1>
+    <a href="index.html" class="back-btn">&lt; Volver</a>
+  </header>
+
+  <main class="container">
+    <div class="header-section">
+      <h1>Calculadora de Notas</h1>
+      <p>Programación Web Básica - carga por cantidad de errores</p>
+    </div>
+
+    <section class="card">
+      <div class="grid">
+        <div class="item">
+          <label for="erroresVF">Parte I - Verdadero/Falso</label>
+          <div class="detalle">12 consignas · 3 puntos c/u · Total 36</div>
+          <input id="erroresVF" type="number" min="0" max="12" value="0" oninput="calcularNota()">
+        </div>
+
+        <div class="item">
+          <label for="erroresMultiple">Parte II - Opción múltiple</label>
+          <div class="detalle">8 consignas · 4 puntos c/u · Total 32</div>
+          <input id="erroresMultiple" type="number" min="0" max="8" value="0" oninput="calcularNota()">
+        </div>
+
+        <div class="item">
+          <label for="erroresCompletar">Completar oración</label>
+          <div class="detalle">6 consignas · 3 puntos c/u · Total 18</div>
+          <input id="erroresCompletar" type="number" min="0" max="6" value="0" oninput="calcularNota()">
+        </div>
+
+        <div class="item">
+          <label for="erroresCasos">Casos prácticos</label>
+          <div class="detalle">4 consignas · 3,5 puntos c/u · Total 14</div>
+          <input id="erroresCasos" type="number" min="0" max="4" value="0" oninput="calcularNota()">
+        </div>
+      </div>
+    </section>
+
+    <section class="card resultado">
+      <div class="box">
+        <span>Puntaje obtenido</span>
+        <strong id="puntaje">100</strong>
+      </div>
+      <div class="box">
+        <span>Nota final redondeada</span>
+        <strong id="notaFinal">100</strong>
+      </div>
+      <div class="box">
+        <span>Calificación</span>
+        <strong id="calificacion" class="estado excelente">Excelente</strong>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Detalle de cálculo</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Sección</th>
+            <th>Errores</th>
+            <th>Descuento</th>
+            <th>Puntaje</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Verdadero/Falso</td>
+            <td id="dErroresVF">0</td>
+            <td id="dDescVF">0</td>
+            <td id="dPuntosVF">36</td>
+          </tr>
+          <tr>
+            <td>Opción múltiple</td>
+            <td id="dErroresMultiple">0</td>
+            <td id="dDescMultiple">0</td>
+            <td id="dPuntosMultiple">32</td>
+          </tr>
+          <tr>
+            <td>Completar oración</td>
+            <td id="dErroresCompletar">0</td>
+            <td id="dDescCompletar">0</td>
+            <td id="dPuntosCompletar">18</td>
+          </tr>
+          <tr>
+            <td>Casos prácticos</td>
+            <td id="dErroresCasos">0</td>
+            <td id="dDescCasos">0</td>
+            <td id="dPuntosCasos">14</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="acciones">
+        <button onclick="calcularNota()">Calcular</button>
+        <button class="secondary" onclick="limpiar()">Limpiar</button>
+      </div>
+
+      <p class="nota">
+        La nota se calcula sobre 100 puntos y se muestra redondeada, sin comas
+        ni decimales. En la sección de casos prácticos, cada error descuenta
+        3,5 puntos, pero el resultado final se redondea automáticamente.
+      </p>
+    </section>
+  </main>
+
+  <footer>&lt;/&gt; Demo - Calculadora de Notas por Errores</footer>
+
+  <script>
+    const configuracion = {
+      vf: { maxErrores: 12, puntosPorError: 3, total: 36 },
+      multiple: { maxErrores: 8, puntosPorError: 4, total: 32 },
+      completar: { maxErrores: 6, puntosPorError: 3, total: 18 },
+      casos: { maxErrores: 4, puntosPorError: 3.5, total: 14 },
+    };
+
+    function obtenerErrores(id, maximo) {
+      const input = document.getElementById(id);
+      let valor = parseInt(input.value, 10);
+      if (isNaN(valor) || valor < 0) valor = 0;
+      if (valor > maximo) valor = maximo;
+      input.value = valor;
+      return valor;
+    }
+
+    function calcularSeccion(errores, puntosPorError, total) {
+      const descuento = errores * puntosPorError;
+      const puntaje = Math.max(total - descuento, 0);
+      return { descuento, puntaje };
+    }
+
+    function definirCalificacion(puntaje) {
+      if (puntaje >= 90) return { texto: "Excelente", clase: "excelente" };
+      if (puntaje >= 80) return { texto: "Muy bueno", clase: "muy-bueno" };
+      if (puntaje >= 70) return { texto: "Bueno", clase: "bueno" };
+      if (puntaje >= 60) return { texto: "Aprobado", clase: "aprobado" };
+      return { texto: "Desaprobado", clase: "desaprobado" };
+    }
+
+    function mostrarNumero(valor) {
+      return Math.round(valor).toString();
+    }
+
+    function calcularNota() {
+      const erroresVF = obtenerErrores("erroresVF", configuracion.vf.maxErrores);
+      const erroresMultiple = obtenerErrores("erroresMultiple", configuracion.multiple.maxErrores);
+      const erroresCompletar = obtenerErrores("erroresCompletar", configuracion.completar.maxErrores);
+      const erroresCasos = obtenerErrores("erroresCasos", configuracion.casos.maxErrores);
+
+      const vf = calcularSeccion(erroresVF, configuracion.vf.puntosPorError, configuracion.vf.total);
+      const multiple = calcularSeccion(erroresMultiple, configuracion.multiple.puntosPorError, configuracion.multiple.total);
+      const completar = calcularSeccion(erroresCompletar, configuracion.completar.puntosPorError, configuracion.completar.total);
+      const casos = calcularSeccion(erroresCasos, configuracion.casos.puntosPorError, configuracion.casos.total);
+
+      const puntajeExacto = vf.puntaje + multiple.puntaje + completar.puntaje + casos.puntaje;
+      const puntajeRedondeado = Math.round(puntajeExacto);
+      const calificacion = definirCalificacion(puntajeRedondeado);
+
+      document.getElementById("puntaje").textContent = mostrarNumero(puntajeExacto);
+      document.getElementById("notaFinal").textContent = puntajeRedondeado;
+
+      const calificacionElemento = document.getElementById("calificacion");
+      calificacionElemento.textContent = calificacion.texto;
+      calificacionElemento.className = "estado " + calificacion.clase;
+
+      document.getElementById("dErroresVF").textContent = erroresVF;
+      document.getElementById("dDescVF").textContent = mostrarNumero(vf.descuento);
+      document.getElementById("dPuntosVF").textContent = mostrarNumero(vf.puntaje);
+
+      document.getElementById("dErroresMultiple").textContent = erroresMultiple;
+      document.getElementById("dDescMultiple").textContent = mostrarNumero(multiple.descuento);
+      document.getElementById("dPuntosMultiple").textContent = mostrarNumero(multiple.puntaje);
+
+      document.getElementById("dErroresCompletar").textContent = erroresCompletar;
+      document.getElementById("dDescCompletar").textContent = mostrarNumero(completar.descuento);
+      document.getElementById("dPuntosCompletar").textContent = mostrarNumero(completar.puntaje);
+
+      document.getElementById("dErroresCasos").textContent = erroresCasos;
+      document.getElementById("dDescCasos").textContent = mostrarNumero(casos.descuento);
+      document.getElementById("dPuntosCasos").textContent = mostrarNumero(casos.puntaje);
+    }
+
+    function limpiar() {
+      document.getElementById("erroresVF").value = 0;
+      document.getElementById("erroresMultiple").value = 0;
+      document.getElementById("erroresCompletar").value = 0;
+      document.getElementById("erroresCasos").value = 0;
+      calcularNota();
+    }
+
+    calcularNota();
+  </script>
+</body>
+</html>

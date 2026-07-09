@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo - CodeHub GYM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f; --cyan: #00f0ff; --magenta: #ff00aa;
+      --yellow: #ffee00; --green: #00ff41; --orange: #ff6600;
+      --white: #e0e0e0; --gray: #555;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background:var(--bg); color:var(--white);
+      font-family:'VT323',monospace; font-size:1.2rem;
+      min-height:100vh; display:flex; flex-direction:column;
+    }
+    .scanlines {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:repeating-linear-gradient(0deg, transparent 0px,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+      pointer-events:none; z-index:9999;
+    }
+    .crt-overlay {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%);
+      pointer-events:none; z-index:9998;
+    }
+    header {
+      background:rgba(10,10,15,0.85); backdrop-filter:blur(10px);
+      border-bottom:1px solid rgba(255,102,0,0.2);
+      padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center;
+    }
+    header h1 {
+      font-family:'Press Start 2P',monospace; font-size:0.6rem; color:var(--orange);
+      text-shadow:0 0 10px var(--orange);
+    }
+    .back-btn {
+      font-family:'Share Tech Mono',monospace; font-size:0.85rem;
+      color:var(--yellow); text-decoration:none; transition:0.3s;
+    }
+    .back-btn:hover { text-shadow:0 0 15px var(--yellow); }
+    .container {
+      flex:1; max-width:1000px; margin:0 auto; padding:2rem; width:100%;
+    }
+    .section-title {
+      font-family:'Press Start 2P',monospace; font-size:0.9rem;
+      text-align:center; margin-bottom:2rem; color:var(--orange);
+      text-shadow:0 0 15px var(--orange);
+    }
+    .section-sub {
+      font-family:'Share Tech Mono',monospace; text-align:center;
+      color:var(--yellow); font-size:0.85rem; margin-bottom:2rem;
+    }
+    .demo-layout {
+      display:grid; grid-template-columns:1fr 1fr; gap:2rem;
+    }
+    @media(max-width:768px) {
+      .demo-layout { grid-template-columns:1fr; }
+      .container { padding:1rem; }
+      .stats-box { flex-wrap:wrap; gap:0.5rem; }
+      .stat-item { flex:1 1 45%; }
+    }
+    @media(max-width:480px) {
+      header { padding:0.6rem 1rem; }
+      header h1 { font-size:0.5rem; }
+      .back-btn { font-size:0.7rem; }
+      .container { padding:0.8rem; }
+      .section-title { font-size:0.65rem; }
+      .section-sub { font-size:0.7rem; }
+      .panel { padding:1rem; }
+      .panel h3 { font-size:0.45rem; }
+      .stats-box { gap:0.3rem; }
+      .stat-num { font-size:0.9rem; }
+      .stat-label { font-size:0.55rem; }
+      .form-group label { font-size:0.7rem; }
+      .form-group input, .form-group select { font-size:0.85rem; }
+      .btn-action { font-size:0.4rem; padding:0.5rem; }
+      .client-card { padding:0.6rem; }
+      .client-name { font-size:0.4rem; }
+      .client-info { font-size:0.6rem; }
+      .client-routine { font-size:0.6rem; }
+      .btn-small { font-size:0.3rem; padding:0.2rem 0.4rem; }
+      footer { font-size:0.65rem; }
+    }
+    @media(max-width:360px) {
+      .stats-box { flex-direction:column; align-items:center; }
+      .stat-item { flex:1 1 100%; }
+      .client-list { max-height:300px; }
+    }
+    .panel {
+      border:1px solid rgba(255,102,0,0.2); padding:1.5rem;
+    }
+    .panel h3 {
+      font-family:'Press Start 2P',monospace; font-size:0.55rem;
+      color:var(--yellow); margin-bottom:1.2rem; text-align:center;
+    }
+    .form-group {
+      margin-bottom:1rem;
+    }
+    .form-group label {
+      font-family:'Share Tech Mono',monospace; color:var(--orange); font-size:0.85rem;
+      display:block; margin-bottom:0.3rem;
+    }
+    .form-group input, .form-group select {
+      width:100%; padding:0.4rem 0.5rem;
+      background:transparent; border:2px solid var(--gray);
+      color:var(--white); font-family:'VT323',monospace; font-size:1rem;
+      outline:none; transition:0.3s;
+    }
+    .form-group input:focus, .form-group select:focus { border-color:var(--orange); box-shadow:0 0 15px rgba(255,102,0,0.1); }
+    .form-group select option { background:var(--bg); color:var(--white); }
+    .btn-action {
+      display:block; width:100%; padding:0.6rem;
+      background:var(--orange); border:none; color:var(--bg);
+      font-family:'Press Start 2P',monospace; font-size:0.5rem;
+      cursor:pointer; transition:0.3s; box-shadow:0 0 15px rgba(255,102,0,0.2);
+    }
+    .btn-action:hover { box-shadow:0 0 30px rgba(255,102,0,0.4); transform:translateY(-2px); }
+    .client-list {
+      max-height:400px; overflow-y:auto;
+    }
+    .client-card {
+      border:1px solid rgba(255,238,0,0.1); padding:0.8rem;
+      margin-bottom:0.8rem; transition:0.3s;
+    }
+    .client-card:hover { border-color:var(--yellow); }
+    .client-header {
+      display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;
+    }
+    .client-name {
+      font-family:'Press Start 2P',monospace; font-size:0.45rem; color:var(--yellow);
+    }
+    .client-plan {
+      font-family:'Share Tech Mono',monospace; font-size:0.75rem;
+      padding:0.15rem 0.4rem; border:1px solid;
+    }
+    .plan-basico { color:var(--green); border-color:var(--green); }
+    .plan-intermedio { color:var(--cyan); border-color:var(--cyan); }
+    .plan-premium { color:var(--magenta); border-color:var(--magenta); }
+    .client-info {
+      font-family:'Share Tech Mono',monospace; font-size:0.7rem; color:var(--gray);
+    }
+    .client-routine {
+      margin-top:0.5rem; padding:0.4rem; background:rgba(255,102,0,0.05);
+      font-family:'Share Tech Mono',monospace; font-size:0.7rem; color:var(--orange);
+    }
+    .client-actions {
+      margin-top:0.5rem; display:flex; gap:0.4rem;
+    }
+    .btn-small {
+      font-family:'Press Start 2P',monospace; font-size:0.35rem;
+      padding:0.25rem 0.5rem; background:none; border:1px solid var(--yellow);
+      color:var(--yellow); cursor:pointer; transition:0.3s;
+    }
+    .btn-small:hover { background:var(--yellow); color:var(--bg); }
+    .btn-small.danger { border-color:var(--magenta); color:var(--magenta); }
+    .btn-small.danger:hover { background:var(--magenta); color:var(--bg); }
+    .empty-state {
+      text-align:center; color:var(--gray);
+      font-family:'Share Tech Mono',monospace; font-size:0.85rem; padding:2rem 0;
+    }
+    .stats-box {
+      display:flex; justify-content:space-around; margin-bottom:1.5rem;
+      border:1px solid rgba(255,102,0,0.15); padding:1rem;
+    }
+    .stat-item { text-align:center; }
+    .stat-num {
+      font-family:'Press Start 2P',monospace; font-size:1.2rem; color:var(--orange);
+    }
+    .stat-label {
+      font-family:'Share Tech Mono',monospace; font-size:0.7rem; color:var(--gray);
+    }
+    footer {
+      text-align:center; padding:1.5rem;
+      border-top:1px solid rgba(255,102,0,0.1);
+      font-family:'Share Tech Mono',monospace; font-size:0.75rem; color:var(--gray);
+    }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+  <div class="crt-overlay"></div>
+
+  <header>
+    <h1>&#127947; CodeHub GYM</h1>
+    <a href="index.html" class="back-btn">&lt; Volver</a>
+  </header>
+
+  <div class="container">
+    <h2 class="section-title">// SISTEMA DE GESTION</h2>
+    <p class="section-sub">Registra clientes y asigna rutinas de entrenamiento</p>
+
+    <div class="stats-box" id="statsBox">
+      <div class="stat-item">
+        <div class="stat-num" id="totalClients">0</div>
+        <div class="stat-label">CLIENTES</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" id="totalBasic">0</div>
+        <div class="stat-label">BASICO</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" id="totalIntermediate">0</div>
+        <div class="stat-label">INTERMEDIO</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" id="totalPremium">0</div>
+        <div class="stat-label">PREMIUM</div>
+      </div>
+    </div>
+
+    <div class="demo-layout">
+      <div class="panel">
+        <h3>&#10133; REGISTRAR CLIENTE</h3>
+        <div class="form-group">
+          <label>$&gt; nombre:</label>
+          <input type="text" id="nameInput" placeholder="nombre del cliente...">
+        </div>
+        <div class="form-group">
+          <label>$&gt; edad:</label>
+          <input type="number" id="ageInput" placeholder="edad..." min="12" max="99">
+        </div>
+        <div class="form-group">
+          <label>$&gt; telefono:</label>
+          <input type="text" id="phoneInput" placeholder="+56 9 XXXX XXXX...">
+        </div>
+        <div class="form-group">
+          <label>$&gt; plan:</label>
+          <select id="planInput">
+            <option value="Basico">Basico - $25.000/mes</option>
+            <option value="Intermedio">Intermedio - $40.000/mes</option>
+            <option value="Premium">Premium - $60.000/mes</option>
+          </select>
+        </div>
+        <button class="btn-action" onclick="registerClient()">REGISTRAR</button>
+      </div>
+
+      <div class="panel">
+        <h3>&#128100; CLIENTES REGISTRADOS</h3>
+        <div id="clientList" class="client-list">
+          <div class="empty-state">No hay clientes registrados aun</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:2rem;">
+      <h3>&#128220; ASIGNAR RUTINA</h3>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:200px;">
+          <label>$&gt; cliente:</label>
+          <select id="routineClient"></select>
+        </div>
+        <div class="form-group" style="flex:2;min-width:250px;">
+          <label>$&gt; rutina:</label>
+          <input type="text" id="routineInput" placeholder="ej: Pecho y triceps - Lunes/Miercoles/Viernes">
+        </div>
+        <button class="btn-action" style="width:auto;padding:0.6rem 1.5rem;align-self:flex-end;" onclick="assignRoutine()">ASIGNAR</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>&lt;/&gt; Demo - CodeHub GYM</footer>
+
+  <script>
+    let clients = [];
+    let clientId = 1;
+
+    function registerClient() {
+      const name = document.getElementById('nameInput').value.trim();
+      const age = parseInt(document.getElementById('ageInput').value);
+      const phone = document.getElementById('phoneInput').value.trim();
+      const plan = document.getElementById('planInput').value;
+
+      if (!name) { alert('ERROR: Nombre requerido'); return; }
+      if (!age || age < 12 || age > 99) { alert('ERROR: Edad invalida (12-99)'); return; }
+
+      const client = {
+        id: clientId++,
+        name,
+        age,
+        phone: phone || 'No registrado',
+        plan,
+        routine: ''
+      };
+      clients.push(client);
+      document.getElementById('nameInput').value = '';
+      document.getElementById('ageInput').value = '';
+      document.getElementById('phoneInput').value = '';
+      renderClients();
+      updateStats();
+      updateRoutineSelect();
+    }
+
+    function deleteClient(id) {
+      clients = clients.filter(c => c.id !== id);
+      renderClients();
+      updateStats();
+      updateRoutineSelect();
+    }
+
+    function assignRoutine() {
+      const clientId = parseInt(document.getElementById('routineClient').value);
+      const routine = document.getElementById('routineInput').value.trim();
+      if (!clientId) { alert('ERROR: Selecciona un cliente'); return; }
+      if (!routine) { alert('ERROR: Describe la rutina'); return; }
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+        client.routine = routine;
+        document.getElementById('routineInput').value = '';
+        renderClients();
+      }
+    }
+
+    function renderClients() {
+      const container = document.getElementById('clientList');
+      if (clients.length === 0) {
+        container.innerHTML = '<div class="empty-state">No hay clientes registrados aun</div>';
+        return;
+      }
+      container.innerHTML = clients.map(c => {
+        const planClass = c.plan === 'Basico' ? 'plan-basico' : c.plan === 'Intermedio' ? 'plan-intermedio' : 'plan-premium';
+        return `
+          <div class="client-card">
+            <div class="client-header">
+              <span class="client-name">${c.name}</span>
+              <span class="client-plan ${planClass}">${c.plan}</span>
+            </div>
+            <div class="client-info">Edad: ${c.age} | Telefono: ${c.phone}</div>
+            ${c.routine ? `<div class="client-routine">&#128170; ${c.routine}</div>` : ''}
+            <div class="client-actions">
+              <button class="btn-small danger" onclick="deleteClient(${c.id})">ELIMINAR</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function updateStats() {
+      document.getElementById('totalClients').textContent = clients.length;
+      document.getElementById('totalBasic').textContent = clients.filter(c => c.plan === 'Basico').length;
+      document.getElementById('totalIntermediate').textContent = clients.filter(c => c.plan === 'Intermedio').length;
+      document.getElementById('totalPremium').textContent = clients.filter(c => c.plan === 'Premium').length;
+    }
+
+    function updateRoutineSelect() {
+      const select = document.getElementById('routineClient');
+      select.innerHTML = '<option value="">Seleccionar cliente</option>' +
+        clients.map(c => `<option value="${c.id}">${c.name} (${c.plan})</option>`).join('');
+    }
+  </script>
+</body>
+</html>

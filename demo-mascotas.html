@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo - Tienda de Mascotas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f; --cyan: #00f0ff; --magenta: #ff00aa;
+      --yellow: #ffee00; --green: #00ff41; --orange: #ff6600;
+      --white: #e0e0e0; --gray: #555;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background:var(--bg); color:var(--white);
+      font-family:'VT323',monospace; font-size:1.2rem;
+      min-height:100vh; display:flex; flex-direction:column;
+    }
+    .scanlines {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:repeating-linear-gradient(0deg, transparent 0px,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+      pointer-events:none; z-index:9999;
+    }
+    .crt-overlay {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%);
+      pointer-events:none; z-index:9998;
+    }
+    header {
+      background:rgba(10,10,15,0.85); backdrop-filter:blur(10px);
+      border-bottom:1px solid rgba(0,240,255,0.15);
+      padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center;
+    }
+    header h1 {
+      font-family:'Press Start 2P',monospace; font-size:0.6rem; color:var(--cyan);
+      text-shadow:0 0 10px var(--cyan);
+    }
+    .back-btn {
+      font-family:'Share Tech Mono',monospace; font-size:0.85rem;
+      color:var(--magenta); text-decoration:none; transition:0.3s;
+    }
+    .back-btn:hover { text-shadow:0 0 15px var(--magenta); }
+    .container {
+      flex:1; max-width:1100px; margin:0 auto; padding:2rem; width:100%;
+    }
+    .section-title {
+      font-family:'Press Start 2P',monospace; font-size:0.9rem;
+      text-align:center; margin-bottom:2rem; color:var(--cyan);
+      text-shadow:0 0 15px var(--cyan);
+    }
+    .demo-layout {
+      display:grid; grid-template-columns:1fr 300px; gap:2rem;
+    }
+    @media(max-width:768px) {
+      .demo-layout { grid-template-columns:1fr; }
+      .container { padding:1rem; }
+      .pets-grid { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.8rem; }
+    }
+    @media(max-width:480px) {
+      header { padding:0.6rem 1rem; }
+      header h1 { font-size:0.45rem; }
+      .back-btn { font-size:0.7rem; }
+      .container { padding:0.8rem; }
+      .section-title { font-size:0.65rem; }
+      .search-bar { flex-wrap:wrap; }
+      .search-bar input { min-width:100%; }
+      .search-bar select { width:100%; }
+      .pets-grid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:0.6rem; }
+      .pet-card { padding:0.6rem; }
+      .pet-emoji { font-size:2rem; }
+      .pet-name { font-size:0.4rem; }
+      .pet-price { font-size:0.45rem; }
+      .add-cart-btn { font-size:0.35rem; padding:0.3rem 0.5rem; }
+      .cart-box { padding:0.8rem; }
+      .cart-box h3 { font-size:0.5rem; }
+      .cart-item { font-size:0.75rem; flex-wrap:wrap; gap:0.3rem; }
+      .cart-item-price { font-size:0.4rem; }
+      .cart-remove { font-size:0.35rem; }
+      .cart-total { font-size:0.45rem; }
+      .checkout-btn { font-size:0.4rem; padding:0.5rem; }
+      footer { font-size:0.65rem; }
+    }
+    @media(max-width:360px) {
+      .pets-grid { grid-template-columns:1fr 1fr; gap:0.5rem; }
+      .pet-emoji { font-size:1.5rem; }
+    }
+    .search-bar {
+      display:flex; gap:0.5rem; margin-bottom:1.5rem;
+    }
+    .search-bar input {
+      flex:1; padding:0.5rem;
+      background:transparent; border:2px solid var(--gray);
+      color:var(--white); font-family:'VT323',monospace; font-size:1rem;
+      outline:none; transition:0.3s;
+    }
+    .search-bar input:focus { border-color:var(--cyan); }
+    .search-bar select {
+      padding:0.5rem; background:var(--bg); border:2px solid var(--gray);
+      color:var(--white); font-family:'VT323',monospace; font-size:1rem; outline:none;
+    }
+    .pets-grid {
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:1rem;
+    }
+    .pet-card {
+      border:1px solid rgba(0,240,255,0.15); padding:1rem;
+      text-align:center; transition:0.3s; cursor:pointer;
+    }
+    .pet-card:hover { border-color:var(--cyan); transform:translateY(-3px); box-shadow:0 5px 20px rgba(0,240,255,0.1); }
+    .pet-emoji { font-size:3rem; margin-bottom:0.5rem; }
+    .pet-name { font-family:'Press Start 2P',monospace; font-size:0.5rem; color:var(--cyan); margin-bottom:0.3rem; }
+    .pet-breed { font-family:'Share Tech Mono',monospace; font-size:0.75rem; color:var(--gray); }
+    .pet-price { font-family:'Press Start 2P',monospace; font-size:0.55rem; color:var(--yellow); margin:0.5rem 0; }
+    .add-cart-btn {
+      background:none; border:1px solid var(--green); color:var(--green);
+      font-family:'Press Start 2P',monospace; font-size:0.45rem; padding:0.4rem 0.8rem;
+      cursor:pointer; transition:0.3s; width:100%;
+    }
+    .add-cart-btn:hover { background:var(--green); color:var(--bg); }
+    .add-cart-btn:disabled { border-color:var(--gray); color:var(--gray); cursor:not-allowed; background:transparent; }
+    .cart-box {
+      border:1px solid rgba(255,0,170,0.2); padding:1rem;
+      position:sticky; top:6rem;
+    }
+    .cart-box h3 {
+      font-family:'Press Start 2P',monospace; font-size:0.6rem;
+      color:var(--magenta); margin-bottom:1rem; text-align:center;
+    }
+    .cart-item {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:0.5rem 0; border-bottom:1px solid rgba(255,255,255,0.05);
+      font-size:0.9rem;
+    }
+    .cart-item-name { font-family:'Share Tech Mono',monospace; color:var(--white); }
+    .cart-item-price { font-family:'Press Start 2P',monospace; font-size:0.45rem; color:var(--yellow); }
+    .cart-remove {
+      background:none; border:none; color:var(--magenta); cursor:pointer;
+      font-family:'Press Start 2P',monospace; font-size:0.4rem; transition:0.3s;
+    }
+    .cart-remove:hover { text-shadow:0 0 10px var(--magenta); }
+    .cart-total {
+      display:flex; justify-content:space-between; padding-top:0.8rem;
+      font-family:'Press Start 2P',monospace; font-size:0.55rem;
+    }
+    .cart-total span:last-child { color:var(--yellow); }
+    .cart-empty {
+      text-align:center; color:var(--gray);
+      font-family:'Share Tech Mono',monospace; font-size:0.85rem; padding:2rem 0;
+    }
+    .checkout-btn {
+      display:block; width:100%; margin-top:1rem; padding:0.6rem;
+      background:var(--magenta); border:none; color:var(--bg);
+      font-family:'Press Start 2P',monospace; font-size:0.5rem;
+      cursor:pointer; transition:0.3s;
+    }
+    .checkout-btn:hover { box-shadow:0 0 20px rgba(255,0,170,0.4); }
+    .toast {
+      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:var(--bg); border:2px solid var(--green);
+      padding:2rem; text-align:center; z-index:10000;
+      display:none;
+    }
+    .toast p { font-family:'Press Start 2P',monospace; font-size:0.7rem; color:var(--green); margin-bottom:1rem; }
+    .toast button {
+      background:var(--green); border:none; color:var(--bg);
+      font-family:'Press Start 2P',monospace; font-size:0.5rem; padding:0.5rem 1rem; cursor:pointer;
+    }
+    footer {
+      text-align:center; padding:1.5rem;
+      border-top:1px solid rgba(0,240,255,0.1);
+      font-family:'Share Tech Mono',monospace; font-size:0.75rem; color:var(--gray);
+    }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+  <div class="crt-overlay"></div>
+
+  <header>
+    <h1>&gt; Tienda de Mascotas</h1>
+    <a href="index.html" class="back-btn">&lt; Volver</a>
+  </header>
+
+  <div class="container">
+    <h2 class="section-title">// CATALOGO DE MASCOTAS</h2>
+
+    <div class="demo-layout">
+      <div>
+        <div class="search-bar">
+          <input type="text" id="searchInput" placeholder="buscar mascota..." oninput="renderPets()">
+          <select id="typeFilter" onchange="renderPets()">
+            <option value="all">Todas</option>
+            <option value="perro">Perros</option>
+            <option value="gato">Gatos</option>
+            <option value="ave">Aves</option>
+            <option value="roedor">Roedores</option>
+          </select>
+        </div>
+        <div id="petsGrid" class="pets-grid"></div>
+      </div>
+      <div>
+        <div class="cart-box">
+          <h3>&#128722; CARRITO</h3>
+          <div id="cartItems"><div class="cart-empty">El carrito esta vacio</div></div>
+          <div id="cartTotal" class="cart-total" style="display:none;">
+            <span>TOTAL:</span>
+            <span id="totalPrice">$0</span>
+          </div>
+          <button class="checkout-btn" id="checkoutBtn" onclick="checkout()" style="display:none;">COMPRAR</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">
+    <p>&#10003; COMPRA EXITOSA</p>
+    <button onclick="document.getElementById('toast').style.display='none'">OK</button>
+  </div>
+
+  <footer>&lt;/&gt; Demo - Tienda de Mascotas</footer>
+
+  <script>
+    const pets = [
+      { id:1, name:'Max', emoji:'&#128021;', type:'perro', breed:'Labrador', price:350 },
+      { id:2, name:'Luna', emoji:'&#128021;', type:'perro', breed:'Pastor Aleman', price:420 },
+      { id:3, name:'Toby', emoji:'&#128021;', type:'perro', breed:'Bulldog Frances', price:500 },
+      { id:4, name:'Mimi', emoji:'&#128008;', type:'gato', breed:'Persa', price:280 },
+      { id:5, name:'Simba', emoji:'&#128008;', type:'gato', breed:'Siames', price:310 },
+      { id:6, name:'Garfield', emoji:'&#128008;', type:'gato', breed:'Naranjo', price:260 },
+      { id:7, name:'Piolin', emoji:'&#128038;', type:'ave', breed:'Canario', price:120 },
+      { id:8, name:'Rio', emoji:'&#128038;', type:'ave', breed:'Perico Australiano', price:180 },
+      { id:9, name:'Copito', emoji:'&#128048;', type:'roedor', breed:'Conejo Enano', price:150 },
+      { id:10, name:'Chip', emoji:'&#128057;', type:'roedor', breed:'Hamster Dorado', price:80 },
+    ];
+    let cart = [];
+
+    function renderPets() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const type = document.getElementById('typeFilter').value;
+      const grid = document.getElementById('petsGrid');
+      grid.innerHTML = '';
+      const filtered = pets.filter(p => {
+        const matchSearch = p.name.toLowerCase().includes(search) || p.breed.toLowerCase().includes(search);
+        const matchType = type === 'all' || p.type === type;
+        return matchSearch && matchType;
+      });
+      filtered.forEach(p => {
+        const inCart = cart.some(c => c.id === p.id);
+        const card = document.createElement('div');
+        card.className = 'pet-card';
+        card.innerHTML = `
+          <div class="pet-emoji">${p.emoji}</div>
+          <div class="pet-name">${p.name}</div>
+          <div class="pet-breed">${p.breed}</div>
+          <div class="pet-price">$${p.price}</div>
+          <button class="add-cart-btn" ${inCart?'disabled':''} onclick="addToCart(${p.id})">
+            ${inCart ? 'EN CARRITO' : 'AGREGAR'}
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function addToCart(id) {
+      const pet = pets.find(p => p.id === id);
+      if (!pet || cart.some(c => c.id === id)) return;
+      cart.push(pet);
+      renderCart();
+      renderPets();
+    }
+
+    function removeFromCart(id) {
+      cart = cart.filter(c => c.id !== id);
+      renderCart();
+      renderPets();
+    }
+
+    function renderCart() {
+      const container = document.getElementById('cartItems');
+      const totalEl = document.getElementById('cartTotal');
+      const checkoutBtn = document.getElementById('checkoutBtn');
+      if (cart.length === 0) {
+        container.innerHTML = '<div class="cart-empty">El carrito esta vacio</div>';
+        totalEl.style.display = 'none';
+        checkoutBtn.style.display = 'none';
+        return;
+      }
+      let html = '';
+      let total = 0;
+      cart.forEach(c => {
+        total += c.price;
+        html += `
+          <div class="cart-item">
+            <span class="cart-item-name">${c.emoji} ${c.name}</span>
+            <span class="cart-item-price">$${c.price}</span>
+            <button class="cart-remove" onclick="removeFromCart(${c.id})">X</button>
+          </div>`;
+      });
+      container.innerHTML = html;
+      document.getElementById('totalPrice').textContent = '$' + total;
+      totalEl.style.display = 'flex';
+      checkoutBtn.style.display = 'block';
+    }
+
+    function checkout() {
+      const total = cart.reduce((sum, c) => sum + c.price, 0);
+      document.getElementById('toast').querySelector('p').innerHTML =
+        '&#10003; COMPRA EXITOSA<br><span style="font-size:0.5rem;color:var(--gray)">Total: $' + total +
+        ' | ' + cart.length + ' mascota(s)</span>';
+      document.getElementById('toast').style.display = 'block';
+      cart = [];
+      renderCart();
+      renderPets();
+    }
+
+    renderPets();
+  </script>
+</body>
+</html>
