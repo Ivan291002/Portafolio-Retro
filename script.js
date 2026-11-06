@@ -135,27 +135,111 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // === CONTACT FORM ===
+  // === CONTACT FORM (WEB3FORMS CON CAPAS DE SEGURIDAD) ===
+  const WEB3FORMS_ACCESS_KEY = "72fd7cf3-b10a-483d-bea6-d98a1ee44b01";
+
   const contactForm = document.getElementById("contact-form");
   if (contactForm) {
+    function showFeedback(btn, originalText, message, color, duration = 3000) {
+      btn.textContent = message;
+      btn.style.background = color;
+      btn.style.boxShadow = `0 0 30px ${color}80`;
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = "";
+        btn.style.boxShadow = "";
+        btn.disabled = false;
+      }, duration);
+    }
+
     contactForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const btn = contactForm.querySelector("button");
-      const originalText = btn.textContent;
+      const originalText = btn.getAttribute("data-text") || "Enviar Mensaje";
+
+      // 1. SEGURIDAD: Detección de Bot (Honeypot en cliente)
+      const botField = document.getElementById("bot-check");
+      if (botField && botField.value.trim() !== "") {
+        // Bot detectado: fingir envío exitoso sin realizar petición
+        contactForm.reset();
+        showFeedback(btn, originalText, "Mensaje Enviado!", "#00ff41");
+        return;
+      }
+
+      // 2. SEGURIDAD: Rate Limiting / Cooldown anti-spam (60 segundos)
+      const COOLDOWN_SECONDS = 60;
+      const lastSend = localStorage.getItem("portfolio_last_message_ts");
+      if (lastSend) {
+        const elapsed = (Date.now() - parseInt(lastSend, 10)) / 1000;
+        if (elapsed < COOLDOWN_SECONDS) {
+          const remaining = Math.ceil(COOLDOWN_SECONDS - elapsed);
+          showFeedback(btn, originalText, `ESPERA ${remaining}s (ANTI-SPAM)`, "#ff6600");
+          return;
+        }
+      }
+
+      // 3. Sanitización y validación de campos
+      const name = (document.getElementById("name").value || "").trim();
+      const email = (document.getElementById("email").value || "").trim();
+      const message = (document.getElementById("message").value || "").trim();
+
+      if (!name || !email || !message) {
+        showFeedback(btn, originalText, "COMPLETA TODOS LOS CAMPOS", "#ff00aa");
+        return;
+      }
+
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        showFeedback(btn, originalText, "EMAIL INVALIDO", "#ff00aa");
+        return;
+      }
+
+      if (name.length > 80 || email.length > 100 || message.length > 1500) {
+        showFeedback(btn, originalText, "TEXTO DEMASIADO LARGO", "#ff00aa");
+        return;
+      }
+
+      if (WEB3FORMS_ACCESS_KEY === "TU_ACCESS_KEY_AQUI") {
+        showFeedback(btn, originalText, "FALTA ACCESS KEY EN SCRIPT.JS", "#ff00aa", 4000);
+        console.warn("Genera tu Access Key gratis en https://web3forms.com y pégala en script.js");
+        return;
+      }
+
       btn.textContent = "Enviando...";
       btn.disabled = true;
-      setTimeout(() => {
-        btn.textContent = "Mensaje Enviado!";
-        btn.style.background = "#00ff41";
-        btn.style.boxShadow = "0 0 30px rgba(0,255,65,0.5)";
-        setTimeout(() => {
-          btn.textContent = originalText;
-          btn.style.background = "";
-          btn.style.boxShadow = "";
-          btn.disabled = false;
+
+      // 4. Envío mediante Web3Forms API
+      fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_ACCESS_KEY,
+          name: name,
+          from_name: name,
+          email: email,
+          message: message,
+          subject: `Nuevo contacto de ${name} (Portafolio Retro)`,
+          botcheck: ""
+        })
+      })
+      .then(async (response) => {
+        const data = await response.json();
+        if (response.ok && data.success) {
+          localStorage.setItem("portfolio_last_message_ts", Date.now().toString());
+          showFeedback(btn, originalText, "Mensaje Enviado!", "#00ff41");
           contactForm.reset();
-        }, 2000);
-      }, 1500);
+        } else {
+          throw new Error(data.message || "Error al enviar mensaje");
+        }
+      })
+      .catch((error) => {
+        console.error("Error Web3Forms:", error);
+        showFeedback(btn, originalText, "Error al enviar", "#ff6600");
+      });
     });
   }
 

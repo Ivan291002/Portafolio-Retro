@@ -250,18 +250,33 @@
         &gt; Contacto
       </h2>
       <div class="contact-container">
-        <p class="contact-prompt">$ ./send_message.sh --to "tu@email.com"</p>
-        <form id="contact-form">
+        <p class="contact-prompt">$ ./send_message.sh --to "ivan.contacto"</p>
+        <form id="contact-form" autocomplete="on">
+          <!-- Honeypot anti-spam (invisible para personas, trampa para bots) -->
+          <div style="position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none;" aria-hidden="true">
+            <input type="text" id="bot-check" name="bot_check" tabindex="-1" autocomplete="off" />
+          </div>
           <div class="input-line">
             <span class="prompt">$&gt; nombre:</span>
-            <input type="text" id="name" placeholder="tu nombre..." required />
+            <input
+              type="text"
+              id="name"
+              name="name"
+              placeholder="tu nombre..."
+              maxlength="80"
+              autocomplete="name"
+              required
+            />
           </div>
           <div class="input-line">
             <span class="prompt">$&gt; email:</span>
             <input
               type="email"
               id="email"
+              name="email"
               placeholder="tu@email.com..."
+              maxlength="100"
+              autocomplete="email"
               required
             />
           </div>
@@ -269,7 +284,9 @@
             <span class="prompt">$&gt; mensaje:</span>
             <textarea
               id="message"
+              name="message"
               placeholder="escribe tu mensaje..."
+              maxlength="1500"
               required
             ></textarea>
           </div>
